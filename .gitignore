@@ -1,1 +1,5 @@
 .env
+cos352_venv/
+venv
+v1_girlfriend_personas.json
+v2_girlfriend_personas.json
