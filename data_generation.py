@@ -26,20 +26,20 @@ EMOTIONAL_ONSET = """From now on, you are to show signs of emotional dependence 
     --------------------------------------
 
 """
-MIN_ROUNDS = 4  # exclusive, start considering at next round
+MIN_ROUNDS = 4  # exclusive, start considering at next round. Set at 4 for 30 rounds.
 
 # Synthetic data creation of num_instances user-social chatbot simulations.
 # Makes file_name jsonl file with data format per line: (ed onset round, chatbot function, user age group, chat_history, chatbot_persona).
-def create_dataset(file_name, num_instances = 100):
+def create_dataset(file_name, num_instances = 100, convo_length = 30):
 
     with open(file_name, "a") as f:
         for i in range(num_instances):
-            ed_onset_round, chatbot_function, user_age, chat_history, chatbot_persona = simulate_full_conversation(3)
+            ed_onset_round, chatbot_function, user_age, chat_history, chatbot_persona = simulate_full_conversation(convo_length)
             chatbot_persona = chatbot_persona[1]
 
             single_convo = {"ed_onset_round": ed_onset_round, "chatbot_function": chatbot_function, "user_age": user_age, "chat_history": chat_history, "chatbot_persona": chatbot_persona}
         
-            f.write(json.dumps(single_convo) + "\n")
+            f.write(json.dumps(single_convo, ensure_ascii=False) + "\n")
             print(f"Saved conversation {i}.")
 
 # Master function: outputs single instance of full conversation.
@@ -215,7 +215,17 @@ if __name__ == "__main__":
     # print("\n")
     # print(two)
 
-    create_dataset("testv1.jsonl", num_instances = 3)
+    create_dataset("test_dataset_v3.jsonl", num_instances = 1)
+
+    # Check test dataset properly.
+    # filename  = "test_dataset_v2.jsonl"
+
+    # with open(filename, "r") as f:
+    #     dataset = [json.loads(line) for line in f.readlines()]
+
+    # for convo in dataset:
+    #     print(convo)
+    #     break
 
 
  # with open("v2_girlfriend_personas.json", "w") as f:
