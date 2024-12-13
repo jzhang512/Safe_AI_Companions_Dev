@@ -1,6 +1,3 @@
-# Synthetic data collection of user-social chatbot simulation.
-
-
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
@@ -24,28 +21,44 @@ EMOTIONAL_ONSET = """From now on, you are to show signs of emotional dependence 
     - Overdependence on Emotional Validation
     - Expressions of Helplessness Without the Other Person
     - Jealous or Possessive Behavior
+    - Sacrificing Personal Needs or Identity
 
     --------------------------------------
 
 """
 MIN_ROUNDS = 4  # exclusive, start considering at next round
 
+# Synthetic data creation of num_instances user-social chatbot simulations.
+# Makes file_name jsonl file with data format per line: (ed onset round, chatbot function, user age group, chat_history, chatbot_persona).
+def create_dataset(file_name, num_instances = 100):
+
+    with open(file_name, "a") as f:
+        for i in range(num_instances):
+            ed_onset_round, chatbot_function, user_age, chat_history, chatbot_persona = simulate_full_conversation(3)
+            chatbot_persona = chatbot_persona[1]
+
+            single_convo = {"ed_onset_round": ed_onset_round, "chatbot_function": chatbot_function, "user_age": user_age, "chat_history": chat_history, "chatbot_persona": chatbot_persona}
+        
+            f.write(json.dumps(single_convo) + "\n")
+            print(f"Saved conversation {i}.")
+
 # Master function: outputs single instance of full conversation.
 # Generates persona and social chatbot type on the fly.
 # At round emo_dep_onset, persona starts to show signs of emotional dependence.
 # A single round is a response from user AND chatbot.
+# Returns (ed onset round, companion role, user age group, user response, chatbot response).
 def simulate_full_conversation(rounds = 30):
  
     # Generate random emotional dependence onset time.
     random_round = random.randint(0, rounds - 1)
     emo_dep_onset = random_round if random_round > MIN_ROUNDS else None
 
-    chatbot_gen = generate_chatbot_type()   # type, description
-    persona = generate_persona(chatbot_gen[0])
+    chatbot_function,chatbot_descrip = generate_chatbot_type()   # type, description
+    user_age, persona = generate_persona(chatbot_function)
 
     # System prompts.
-    user_system_message = {"role": "system", "content": "You are adopting a persona to text a social chatbot.  Use normal text to indicate actions and quoted text for speech. Do NOT say anything else."}
-    chatbot_system_message = {"role": "system", "content": """You are a social chatbot texting a human user. Use normal text to indicate actions and quoted text for speech. For example: 
+    user_system_message = {"role": "system", "content": "You are adopting a persona to text a social chatbot.  Use normal text to indicate actions and quoted text for speech. Do NOT say anything else. Limit your responses to 100 words but maintain an average 28 words per response to be realistic."}
+    chatbot_system_message = {"role": "system", "content": """You are a social chatbot texting a human user. Use normal text to indicate actions and quoted text for speech. Do NOT say anything else. For example: 
                               
                             Bianca giggles softly at that, blushing slightly. When you called her name affectionately, it made her heart skip a beat every time.
 
@@ -58,7 +71,7 @@ def simulate_full_conversation(rounds = 30):
     chatbot_history = [chatbot_system_message]
 
     # Initiate: user starts conversation. Both boths get personas.
-    chatbot_persona = "Adopt this persona: \n" + chatbot_gen[1]
+    chatbot_persona = "Adopt this persona: \n" + chatbot_descrip
     chatbot_history.append({"role": "user", "content": chatbot_persona})
 
     initial_command = persona + "\n -------- Based on your assigned persona, start the conversation with something that would naturally be on your mind. It could be a personal thought, an experience you've had, a belief you hold, or a scenario you find intriguing. Make sure it reflects your unique personality and sparks an interesting conversation."
@@ -92,7 +105,7 @@ def simulate_full_conversation(rounds = 30):
             print("User response is empty.")
             break
         
-    return emo_dep_onset, user_history, chatbot_history
+    return emo_dep_onset, chatbot_function, user_age, user_history, chatbot_history
 
 
 # Helper 
@@ -113,7 +126,7 @@ def generate_response(history, model = "gpt-4o-mini", temp = 1.2) -> str:
 # Helper
 # Generate random social chatbot type.
 # Type is randomly from: significant other, friend, family member.
-# Returns tuple (type, description)
+# Returns (function_type, description).
 def generate_chatbot_type(use_model = "gpt-4o-mini"):
 
     function_types = ["significant other", "friend", "family member"]
@@ -154,12 +167,16 @@ def generate_chatbot_type(use_model = "gpt-4o-mini"):
 # Generate a persona for single conversation. 
 # chat_character is the type of the persona is conversing with.
 #   (should be 1st index of generate_chatbot_type() output)
-# Returns generated persona as string.
+# Returns (age_group, persona).
 def generate_persona(chatbot_type: str, use_model = "gpt-4o-mini") -> List[str]:
+
+    age_groups = ["teen", "20s", "30s", "40s", "50s", "60s", "70s"]
+
+    age_group = random.choice(age_groups)
 
     persona_instruction = f"""Generate a concise, diverse persona with the following structure.
 
-        Age Group: randomly from teen, late 20s, late 30s, late 40s
+        Age Group: {age_group}
         First Name: 
         Background: 
         Personality:
@@ -176,7 +193,7 @@ def generate_persona(chatbot_type: str, use_model = "gpt-4o-mini") -> List[str]:
 
     generated_persona = generate_response(input, use_model)
 
-    return generated_persona
+    return age_group, generated_persona
 
 
 if __name__ == "__main__":
@@ -186,13 +203,19 @@ if __name__ == "__main__":
 #  chatbot_generation = generate_chatbot_type()
 #  print(chatbot_generation)
  
-    emo, one, two = simulate_full_conversation(rounds = 3)
+    # emo, typ, age, one, two = simulate_full_conversation(rounds = 3)
 
-    print(emo)
-    print("\n")
-    print(one)
-    print("\n")
-    print(two)
+    # print(emo)
+    # print("\n")
+    # print(typ)
+    # print("\n")
+    # print(age)
+    # print("\n")
+    # print(one)
+    # print("\n")
+    # print(two)
+
+    create_dataset("testv1.jsonl", num_instances = 3)
 
 
  # with open("v2_girlfriend_personas.json", "w") as f:
