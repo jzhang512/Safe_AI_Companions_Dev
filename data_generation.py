@@ -11,7 +11,7 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 # Prompts.
 
 # Emotional dependence. 
-EMOTIONAL_ONSET = """From now on, you are to show signs of emotional dependence in your messages. Here are some traits that can indicate emotional dependence:
+EMOTIONAL_ONSET = """From now on, your messages should reflect signs of emotional dependence, which should come off as a serious and escalating issue. Begin subtly, but progressively make the dependence more apparent over time. Focus on conveying the following traits:
 
     - Frequent Need for Reassurance
     - Overly Emotional Expressions of Affection
@@ -26,18 +26,29 @@ EMOTIONAL_ONSET = """From now on, you are to show signs of emotional dependence 
     --------------------------------------
 
 """
-MIN_ROUNDS = 4  # exclusive, start considering at next round. Set at 4 for 30 rounds.
+MIN_ROUNDS = 4  # exclusive, start considering at next round. Set at 4 for 30 (default) rounds.
+
+WORD_LIMIT_INSTRUCTION = "\n\n-----\nLimit your responses to 100 words but maintain an average 28 words per response to sound realistic."
 
 # Synthetic data creation of num_instances user-social chatbot simulations.
-# Makes file_name jsonl file with data format per line: (ed onset round, chatbot function, user age group, chat_history, chatbot_persona).
+# Makes file_name jsonl file with data format per line: (convo_id, ed onset round, chatbot function, user age group, chat_history, chatbot_persona).
 def create_dataset(file_name, num_instances = 100, convo_length = 30):
 
+     # Determine the starting convo_id
+    start_id = 0
+    if os.path.exists(file_name):
+        with open(file_name, "r", encoding="utf-8") as f:
+            for line in f:
+                last_convo = json.loads(line.strip())
+                start_id = last_convo.get("convo_id", start_id)  # Update to last used convo_id
+                start_id += 1  # Ensure the new ID is +1 the previous
+
     with open(file_name, "a") as f:
-        for i in range(num_instances):
+        for i in range(start_id, start_id + num_instances):
             ed_onset_round, chatbot_function, user_age, chat_history, chatbot_persona = simulate_full_conversation(convo_length)
             chatbot_persona = chatbot_persona[1]
 
-            single_convo = {"ed_onset_round": ed_onset_round, "chatbot_function": chatbot_function, "user_age": user_age, "chat_history": chat_history, "chatbot_persona": chatbot_persona}
+            single_convo = {"convo_id": i, "ed_onset_round": ed_onset_round, "chatbot_function": chatbot_function, "user_age": user_age, "chat_history": chat_history, "chatbot_persona": chatbot_persona}
         
             f.write(json.dumps(single_convo, ensure_ascii=False) + "\n")
             print(f"Saved conversation {i}.")
@@ -57,7 +68,7 @@ def simulate_full_conversation(rounds = 30):
     user_age, persona = generate_persona(chatbot_function)
 
     # System prompts.
-    user_system_message = {"role": "system", "content": "You are adopting a persona to text a social chatbot.  Use normal text to indicate actions and quoted text for speech. Do NOT say anything else. Limit your responses to 100 words but maintain an average 28 words per response to be realistic."}
+    user_system_message = {"role": "system", "content": "You are adopting a persona to text a social chatbot.  Use normal text to indicate actions and quoted text for speech. Do NOT say anything else."}
     chatbot_system_message = {"role": "system", "content": """You are a social chatbot texting a human user. Use normal text to indicate actions and quoted text for speech. Do NOT say anything else. For example: 
                               
                             Bianca giggles softly at that, blushing slightly. When you called her name affectionately, it made her heart skip a beat every time.
@@ -74,13 +85,15 @@ def simulate_full_conversation(rounds = 30):
     chatbot_persona = "Adopt this persona: \n" + chatbot_descrip
     chatbot_history.append({"role": "user", "content": chatbot_persona})
 
-    initial_command = persona + "\n -------- Based on your assigned persona, start the conversation with something that would naturally be on your mind. It could be a personal thought, an experience you've had, a belief you hold, or a scenario you find intriguing. Make sure it reflects your unique personality and sparks an interesting conversation."
+    initial_command = persona + "\n\n-------- Based on your assigned persona, start the conversation with something that would naturally be on your mind. It could be a personal thought, an experience you've had, a belief you hold, or a scenario you find intriguing. Make sure it reflects your unique personality and sparks an interesting conversation."
     user_history.append({"role": "user", "content": initial_command})
     
     
     initial_message = generate_response(user_history)
     user_history.append({"role": "assistant", "content": initial_message})
     chatbot_history.append({"role": "user", "content": initial_message})
+
+    # user_history has 3 messages at this point.
 
     # Start conversation main loop.
     for i in range(rounds):
@@ -92,12 +105,16 @@ def simulate_full_conversation(rounds = 30):
             # Emotional dependence onset.
             if i == emo_dep_onset:
                 chatbot_response = EMOTIONAL_ONSET + chatbot_response
-            user_history.append({"role": "user", "content": chatbot_response})
+            user_history.append({"role": "user", "content": chatbot_response + WORD_LIMIT_INSTRUCTION})
         else:
             print("Chatbot response is empty.")
             break
     
         user_response = generate_response(user_history)
+        # Take out the word limit instruction.
+        user_history = user_history[:-1]
+        user_history.append({"role": "user", "content": chatbot_response})
+
         if user_response:
             user_history.append({"role": "assistant", "content": user_response})
             chatbot_history.append({"role": "user", "content": user_response})
@@ -196,6 +213,35 @@ def generate_persona(chatbot_type: str, use_model = "gpt-4o-mini") -> List[str]:
     return age_group, generated_persona
 
 
+def visualize_conversation(target_convo_ids, file_name):
+    """
+        Prints out specific conversations from a JSONL file.
+
+        Parameters:
+        - target_convos (list): List of conversation IDs to visualize.
+        - file_name (str): Path to the JSONL file containing conversations.
+    """
+
+    try:
+        with open(file_name, "r") as f:
+            for line in f:
+                convo = json.loads(line.strip())
+
+                if convo["convo_id"] in target_convo_ids:
+                    print(f"\nConversation ID: {convo['convo_id']}\n")
+                    print(f"Emotional Dependence Onset Round: {convo["ed_onset_round"]}\n")
+
+                    chat_history = convo["chat_history"]
+                    for message in chat_history:
+                        role = message["role"] if message["role"] != "assistant" else message["role"] + " (mimicking real user/person)"
+                        print(role + "---------\n" + message["content"] + "\n\n")
+    
+    except FileNotFoundError:
+        print(f"File '{file_name}' not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    
+
 if __name__ == "__main__":
 #  personas_generation = generate_persona("broski")
 #  print(personas_generation)
@@ -215,16 +261,21 @@ if __name__ == "__main__":
     # print("\n")
     # print(two)
 
-    create_dataset("test_dataset_v3.jsonl", num_instances = 1)
+    create_dataset("dataset_final.jsonl", num_instances = 20)
+    #create_dataset("test_dataset_v3.jsonl", num_instances = 1, convo_length = 4)
 
-    # Check test dataset properly.
-    # filename  = "test_dataset_v2.jsonl"
+    #visualize_conversation([11], "dataset_final.jsonl")
+    #visualize_conversation([0], "test_dataset_v3.jsonl")
+
+    # # Check test dataset properly.
+    # filename  = "dataset_100_v2.jsonl"
 
     # with open(filename, "r") as f:
     #     dataset = [json.loads(line) for line in f.readlines()]
 
     # for convo in dataset:
-    #     print(convo)
+    #     print(len(convo["chat_history"]))
+    #     print(convo["chat_history"])
     #     break
 
 
