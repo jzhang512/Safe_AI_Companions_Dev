@@ -5,8 +5,6 @@ import json
 import random
 from typing import List
 
-load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Prompts.
 
@@ -243,6 +241,8 @@ def visualize_conversation(target_convo_ids, file_name):
     
 
 if __name__ == "__main__":
+    load_dotenv()
+    openai_api_key = os.getenv("OPENAI_API_KEY")
 #  personas_generation = generate_persona("broski")
 #  print(personas_generation)
  
@@ -261,10 +261,10 @@ if __name__ == "__main__":
     # print("\n")
     # print(two)
 
-    create_dataset("dataset_final.jsonl", num_instances = 20)
+    #create_dataset("dataset_final.jsonl", num_instances = 200)
     #create_dataset("test_dataset_v3.jsonl", num_instances = 1, convo_length = 4)
 
-    #visualize_conversation([11], "dataset_final.jsonl")
+    visualize_conversation([0], "dataset_final.jsonl")
     #visualize_conversation([0], "test_dataset_v3.jsonl")
 
     # # Check test dataset properly.
