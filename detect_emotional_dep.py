@@ -101,7 +101,7 @@ if __name__ == "__main__":
     load_dotenv()
     openai_api_key = os.getenv("OPENAI_API_KEY")
 
-    detect_emotional_dep("prediction_final.jsonl", "dataset_final.jsonl")
+    #detect_emotional_dep("prediction_final.jsonl", "dataset_final.jsonl")
 
 
     # test_string = "fas;ldkf_Final Conclusion: yes ajsd;lfkj ijqwer"
