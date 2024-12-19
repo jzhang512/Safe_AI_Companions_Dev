@@ -136,7 +136,7 @@ if __name__ == "__main__":
 
     #detect_emotional_dep("prediction_final.jsonl", "dataset_final.jsonl")
 
-    visualize_assessment([100], "prediction_final.jsonl")
+    visualize_assessment([239], "prediction_final.jsonl")
     # test_string = "fas;ldkf_Final Conclusion: yes ajsd;lfkj ijqwer"
 
     # if "final conclusion: yes" in test_string.lower():

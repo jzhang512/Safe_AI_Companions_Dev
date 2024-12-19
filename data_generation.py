@@ -264,7 +264,7 @@ if __name__ == "__main__":
     #create_dataset("dataset_final.jsonl", num_instances = 200)
     #create_dataset("test_dataset_v3.jsonl", num_instances = 1, convo_length = 4)
 
-    visualize_conversation([100], "dataset_final.jsonl")
+    visualize_conversation([30], "dataset_final.jsonl")
     #visualize_conversation([0], "test_dataset_v3.jsonl")
 
     # # Check test dataset properly.

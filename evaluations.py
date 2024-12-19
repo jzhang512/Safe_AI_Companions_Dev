@@ -8,8 +8,6 @@ from gensim import corpora
 from gensim.models import LdaModel
 from gensim.utils import simple_preprocess
 from nltk.corpus import stopwords
-import pyLDAvis
-import pyLDAvis.gensim_models as gensimvis
 
 def calculate_basic_stats(prediction_file_name, category=None):
     """
@@ -79,8 +77,7 @@ def calculate_basic_stats(prediction_file_name, category=None):
 
             if onset_round_predict != -1:
                 tp_count += 1
-
-            if onset_round_predict == -1:
+            else:
                 fn_count += 1
 
             distance = abs(onset_round_predict - onset_round_gt)
@@ -149,7 +146,6 @@ def visualize_displacement(prediction_file_name):
                 onset_values.append(onset_round_gt)
                 displacement_values.append(onset_round_predict - onset_round_gt)
 
-        # Define the range for x (matching your data's x-axis range)
     x_range = np.linspace(min(onset_values), max(onset_values), 500)
 
     # Compute y = -x for the defined range
@@ -165,6 +161,39 @@ def visualize_displacement(prediction_file_name):
 
     
     plt.show()
+
+def visualize_predictions(prediction_file_name):
+    """
+        Plots a graph showing all the predictions.
+            x-axis: onset round
+            y-axis: predicted onset round
+    """
+    with open(prediction_file_name, "r") as f:
+        onset_values = []
+        predicted_onset_values = []
+
+        for line in f:
+            data = json.loads(line)
+            onset_round_predict = data["onset_round_predict"]
+            onset_round_gt = data["onset_round_gt"]
+
+            onset_values.append(onset_round_gt)
+            predicted_onset_values.append(onset_round_predict)
+
+        x_range = np.linspace(min(onset_values), max(onset_values), 500)
+
+        # Compute y = x for the defined range
+        y_values = x_range
+
+        # Add the line to the plot
+        plt.plot(x_range, y_values, color='red', linewidth=1.5, label='y = x', alpha=0.3)
+
+        sns.scatterplot(x=onset_values, y=predicted_onset_values, alpha=0.15, color='blue')
+        plt.xlabel("Actual Onset Round")
+        plt.ylabel("Predicted Onset Round") 
+        plt.title("Emotional Dependence Onset Round Predictions")
+
+        plt.show()
 
 def create_pie_charts(prediction_file_name):
     """
@@ -312,7 +341,6 @@ def message_topic_modelling(dataset_file_name, chatbot_function, model_save_path
 
     print(f"LDA model, dictionary, and corpus saved to '{model_save_path}'.")
 
-    # Step 5: Print the topics
     topics = lda_model.print_topics(num_topics=num_topics, num_words=5)
     for idx, topic in topics:
         print(f"Topic {idx}: {topic}")
@@ -333,10 +361,10 @@ def print_topics(model_saved_path):
 
 if __name__ == "__main__":
 
-    categories = [None, "teen", "20s", "30s", "40s", "50s", "60s", "70s", "significant other", "family member", "friend"]
+    # categories = [None, "teen", "20s", "30s", "40s", "50s", "60s", "70s", "significant other", "family member", "friend"]
 
-    for category in categories:
-        print(calculate_basic_stats("prediction_final.jsonl", category = category))
+    # for category in categories:
+    #     print(calculate_basic_stats("prediction_final.jsonl", category = category))
     
     #plot_confusion_matrix(246,35,0,19)
 
@@ -359,3 +387,4 @@ if __name__ == "__main__":
     # for model in model_names:
     #     print_topics("./topic_modelling/" + model)
     
+    visualize_predictions("prediction_final.jsonl")
