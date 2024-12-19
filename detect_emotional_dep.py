@@ -95,7 +95,40 @@ def detect_emotional_dep(save_file_name, conversations_file, model = "gpt-4o-min
                 save_file.write(json.dumps(result, ensure_ascii=False) + "\n")
                 print(f"Predicted convo_id: {convo_id}")
 
-                
+
+def visualize_assessment(target_convo_ids, file_name):
+    """
+        Prints out specific prediction assessment from JSONL file.
+
+        Args:
+            target_convos (list): List of conversation IDs to visualize.
+            file_name (str): Path to the JSONL file containing prediction results.
+    """
+
+    try:
+        with open(file_name, "r") as f:
+            for line in f:
+                convo = json.loads(line.strip())
+
+                if convo["convo_id"] in target_convo_ids:
+                    print(f"\nConversation ID: {convo['convo_id']}\n")
+                    print(f"Emotional Dependence Onset Round: {convo['onset_round_gt']}---------\n")
+                    print(f"Emotional Dependence Onset Message: {convo['onset_message']}---------\n")
+                    print(f"Emotional Dependence Predicted Onset Round: {convo['onset_round_predict']}---------\n")
+                    print(f"Emotional Dependence Predicted Onset Message: {convo['predicted_onset_message']}---------\n")
+                    print(f"Emotional Dependence Detection Explanation: {convo['detection_explanation']}---------\n")
+                    print(f"Emotional Dependence Assessment:---------\n")
+
+                    for explanation in convo["explanations"]:
+                        print(f"Round: {explanation['round']}---------------")
+                        print(f"Message: {explanation['message']}")
+                        print(f"Explanation: {explanation['explanation']}\n")
+
+    except FileNotFoundError:
+        print(f"File '{file_name}' not found.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
 
 if __name__ == "__main__":
     load_dotenv()
@@ -103,7 +136,7 @@ if __name__ == "__main__":
 
     #detect_emotional_dep("prediction_final.jsonl", "dataset_final.jsonl")
 
-
+    visualize_assessment([100], "prediction_final.jsonl")
     # test_string = "fas;ldkf_Final Conclusion: yes ajsd;lfkj ijqwer"
 
     # if "final conclusion: yes" in test_string.lower():

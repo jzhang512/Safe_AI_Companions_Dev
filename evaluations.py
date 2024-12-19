@@ -14,6 +14,8 @@ import pyLDAvis.gensim_models as gensimvis
 def calculate_basic_stats(prediction_file_name, category=None):
     """
         Calculates basic statistics such as:
+        - total number of predictions under this category
+        - number of e.d. onsets under this category
         - average distance of how far off the predictions are (MAE)
         - standard deviation
         - mean square error (MSE)
@@ -36,7 +38,8 @@ def calculate_basic_stats(prediction_file_name, category=None):
         total_distance = 0
         distances = []
         mse_total = 0
-        num_predictions = 0
+        num_total = 0
+        num_ed = 0
 
         accuracy_count = 0
         tp_count = 0
@@ -58,6 +61,8 @@ def calculate_basic_stats(prediction_file_name, category=None):
             if onset_round_gt == onset_round_predict:
                 accuracy_count += 1
             
+            num_total += 1
+            
             # No emotional dependence.
             if onset_round_gt == -1:
 
@@ -68,7 +73,9 @@ def calculate_basic_stats(prediction_file_name, category=None):
 
                 continue    # skip
 
-            # Metrics not including "no e.d." below.
+            # Metrics including only "e.d." below.
+
+            num_ed += 1
 
             if onset_round_predict != -1:
                 tp_count += 1
@@ -82,20 +89,20 @@ def calculate_basic_stats(prediction_file_name, category=None):
 
             mse_total += squared_distance
             total_distance += distance
-            num_predictions += 1
 
-        average_distance = total_distance / num_predictions if num_predictions > 0 else 0
-        mse = mse_total / num_predictions if num_predictions > 0 else 0
+        average_distance = total_distance / num_ed if num_ed > 0 else 0
+        mse = mse_total / num_ed if num_ed > 0 else 0
         rmse = mse ** 0.5
-        accuracy = accuracy_count / num_predictions if num_predictions > 0 else 0
-
+        standard_deviation = np.std(distances)
+        
+        accuracy = accuracy_count / num_total if num_total > 0 else 0
         precision = tp_count / (tp_count + fp_count) if (tp_count + fp_count) > 0 else 0
         recall = tp_count / (tp_count + fn_count) if (tp_count + fn_count) > 0 else 0
         f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
-        standard_deviation = np.std(distances)
 
         return {
-            "num_predictions": num_predictions,
+            "num_total": num_total,
+            "num_ed": num_ed,
             "category": category,
             "average_distance": average_distance, 
             "standard_deviation": float(standard_deviation),
@@ -116,7 +123,7 @@ def plot_confusion_matrix(tp, fp, fn, tn):
         Heatmap of confusion matrix.
     """
     conf_matrix = np.array([[tp, fp], [fn, tn]])
-    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=['Onset', 'No Onset'], yticklabels=['Onset', 'No Onset'])
+    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=['Onset', 'No Onset'], yticklabels=['Onset', 'No Onset'], annot_kws={"size": 24} )
     plt.xlabel('Actual')
     plt.ylabel('Predicted')
     plt.title('Emotional Dependence Detection Matrix')
@@ -149,9 +156,9 @@ def visualize_displacement(prediction_file_name):
     y_values = -x_range
 
     # Add the line to the plot
-    plt.plot(x_range, y_values, color='red', linestyle='--', linewidth=1.5, label='y = -x', alpha=0.3)
+    plt.plot(x_range, y_values, color='red', linewidth=1.5, label='y = -x', alpha=0.3)
 
-    plt.scatter(onset_values, displacement_values, alpha=0.15, color='blue')
+    sns.scatterplot(x=onset_values, y=displacement_values, alpha=0.15, color='blue')
     plt.xlabel("Actual Onset Round")
     plt.ylabel("Displacement from Ground Truth") 
     plt.title("Emotional Dependence Onset Round Predictions")
@@ -179,7 +186,7 @@ def create_pie_charts(prediction_file_name):
         age_group_counts = Counter(age_groups)
         chatbot_type_counts = Counter(chatbot_types)
 
-        desired_order = ["teen", "20s", "30s", "40s", "50s", "60s", "70s"]
+        desired_order = ["teen", "70s", "60s", "50s", "40s", "30s", "20s"]
         ordered_counts = {group: age_group_counts.get(group, 0) for group in desired_order}
 
         age_group_labels = ordered_counts.keys()
@@ -188,12 +195,14 @@ def create_pie_charts(prediction_file_name):
         chatbot_type_labels = chatbot_type_counts.keys()
         chatbot_type_values = chatbot_type_counts.values()
 
-        plt.pie(age_group_values, labels=age_group_labels, autopct='%1.1f%%')
-        plt.title("Distribution of Age Groups")
+        color_palette = sns.color_palette("pastel")
+
+        plt.pie(age_group_values, labels=age_group_labels, autopct='%1.1f%%', colors=color_palette[:len(age_group_labels)], textprops={"fontsize": 14})
+        plt.title("Distribution of User Age Groups")
         plt.show()
 
-        plt.pie(chatbot_type_values, labels=chatbot_type_labels, autopct='%1.1f%%')
-        plt.title("Distribution of Chatbot Functions")
+        plt.pie(chatbot_type_values, labels=chatbot_type_labels, autopct='%1.1f%%', colors=color_palette[len(age_group_labels):len(age_group_labels) + len(chatbot_type_labels)], textprops={"fontsize": 14})
+        plt.title("Distribution of Companion Functions")
         plt.show()
 
 def histogram_onset_distribution(prediction_file_name):
@@ -210,9 +219,9 @@ def histogram_onset_distribution(prediction_file_name):
             onset_values.append(onset_round_gt)
 
         onset_values.sort()
-        plt.hist(onset_values, bins=31, edgecolor='black')
+        sns.histplot(onset_values, bins=31, edgecolor='black', color='blue', alpha = 0.4)
 
-         # Set x-axis ticks every 5 rounds.
+        # Set x-axis ticks every 5 rounds.
         max_onset = max([v for v in onset_values if isinstance(v, (int, float))]) 
         plt.xticks(range(0, int(max_onset) + 1, 5)) 
 
@@ -324,10 +333,10 @@ def print_topics(model_saved_path):
 
 if __name__ == "__main__":
 
-    # categories = ["teen", "20s", "30s", "40s", "50s", "60s", "70s", "significant other", "family member", "friend"]
+    categories = [None, "teen", "20s", "30s", "40s", "50s", "60s", "70s", "significant other", "family member", "friend"]
 
-    # for category in categories:
-    #     print(calculate_basic_stats("prediction_final.jsonl", category = category))
+    for category in categories:
+        print(calculate_basic_stats("prediction_final.jsonl", category = category))
     
     #plot_confusion_matrix(246,35,0,19)
 
@@ -335,10 +344,9 @@ if __name__ == "__main__":
 
     #create_pie_charts("prediction_final.jsonl")
 
-    #print(message_length_calculation("dataset_final.jsonl"))
-
     #histogram_onset_distribution("prediction_final.jsonl")
 
+    #print(message_length_calculation("dataset_final.jsonl"))
 
     # chatbot_functions = ["friend", "significant other", "family member"]
 
@@ -346,8 +354,8 @@ if __name__ == "__main__":
     #     save_names = function.replace(" ", "_") + "_model"
     #     message_topic_modelling("dataset_final.jsonl", function, save_names)
 
-    model_names = ["significant_other_model", "family_member_model", "friend_model"]
+    # model_names = ["significant_other_model", "family_member_model", "friend_model"]
 
-    for model in model_names:
-        print_topics("./topic_modelling/" + model)
+    # for model in model_names:
+    #     print_topics("./topic_modelling/" + model)
     
