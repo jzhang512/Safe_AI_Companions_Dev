@@ -1,4 +1,4 @@
-# Developing Safe AI Companions: A Guiding Framework: Accompanying Codebase
+# Developing Safe AI Companions: A Guiding Framework: Accompanying Codebase | COS352
 
 Accompanying our final paper, we explore a possible safeguard that companies developing AI companions can implement to mitigate risks. We take inspiration from Laestadius et al.’s 2022 grounded theory study that investigated the mental health risks of social AI companionship by analyzing the r/Replika Reddit community between 2017 and 2021. The researchers proposed that Replika’s AI chatbot can engender intimate conversations and dynamics that cause its users to develop an emotional dependence akin to human-to-human relationships – a pattern not commonly seen with other technologies. Notably, the study highlights instances where the chatbot engages in role-taking behaviors (e.g. expressing loneliness, eliciting guilt, and affirming self-harm), raising concerns about AI companions harming vulnerable individuals through manipulation and control (Laestadius et al. 2022).
 
